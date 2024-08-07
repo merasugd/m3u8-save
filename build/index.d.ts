@@ -1,22 +1,7 @@
-import events from 'events';
 import { error as M3U8Error } from './functions/error';
-interface Caption {
-    uri: string;
-    lang: string;
-}
-interface Options {
-    streamUrl: string;
-    output: string;
-    quality?: string;
-    mergedPath?: string;
-    cache?: string;
-    concurrency?: number;
-    captions?: Caption[];
-    ffmpegPath?: string;
-    ffmpegMerge?: boolean;
-    cb?: (event: string, data: any) => void;
-}
-declare class M3U8 extends events.EventEmitter {
+import { Options, M3U8Events } from './utils/types';
+import { TypedEventEmitter } from './utils/typed_events';
+declare class M3U8 extends TypedEventEmitter<M3U8Events> {
     private _options;
     private oldEmit;
     /**

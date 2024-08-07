@@ -4,14 +4,7 @@ import ffmpeg from 'ffmpeg-static';
 import cp from 'child_process';
 import {error} from './error';
 
-interface Segment {
-  path: string;
-}
-
-interface Data {
-  path: string;
-  segments: Segment[];
-}
+import {Data} from '../utils/types';
 
 function ffmpegRun(
   args: string[],

@@ -7,12 +7,9 @@ import url from 'url';
 import {v4 as uuid} from 'uuid';
 import {error as M3U8Error} from './error';
 import dl from './download';
-import { iso6392 } from 'iso-639-2';
+import codec from 'langs';
 
-interface Caption {
-  uri: string;
-  lang: string;
-}
+import {Caption} from '../utils/types';
 
 export default function processVideo(
   input: string,
@@ -162,12 +159,12 @@ function isPath(input: string): boolean {
 }
 
 function langCodec(lang: string): string {
-  const allCodecs = iso6392;
+  const allCodecs = codec.all();
   const fetched = allCodecs.find(v => v.name.toLowerCase() === lang);
 
   if (!fetched) return 'eng';
 
-  return fetched.iso6392B;
+  return fetched['2B'];
 }
 
 function capitalizeFirstLetter(str: string): string {

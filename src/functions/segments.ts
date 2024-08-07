@@ -1,18 +1,12 @@
 import path from 'path';
 import {URL} from 'url';
 import os from 'os';
+import fsp from 'fs/promises';
 
 import dl from './download';
 import {error} from './error';
 
-interface Segment {
-  uri?: string;
-  path?: string;
-}
-
-interface ProgressCallback {
-  (type: 'start' | 'progress' | 'end', data?: any): void;
-}
+import {Segment, ProgressCallback} from '../utils/types';
 
 export default function segment(
   segments: Segment[] = [],
@@ -22,10 +16,12 @@ export default function segment(
   cb: ProgressCallback = console.log
 ): Promise<any> {
   return new Promise(async resolve => {
-    cb('start');
+    cb('start', segments);
 
     const total = segments.length;
+    const startSegmentTime = Date.now();
     let current = 0;
+    let downloaded = 0;
 
     segments = segments.map(v => {
       const uri = v.uri || 'no';
@@ -69,7 +65,10 @@ export default function segment(
       const parsedUrl = new URL(seg.uri!);
       const pathName = parsedUrl.pathname!;
       const extension = path.extname(pathName);
-      const segmentPath = path.join(cache, `segment-${index}${extension}`);
+      const segmentPath = path.join(
+        cache,
+        `downloaded-segment${index}${extension}`
+      );
 
       await sem.take();
 
@@ -77,6 +76,52 @@ export default function segment(
         const dl_r = await dl(seg.uri!, segmentPath);
         if (dl_r !== 100) {
           return resolve(dl_r);
+        }
+
+        const byteSize = (await fsp.stat(segmentPath)).size;
+
+        downloaded += byteSize;
+
+        const elapsedSegmentTime = (Date.now() - startSegmentTime) / 1000;
+        const averageSegmentSize = downloaded / elapsedSegmentTime;
+        const remainingSegments = total - current;
+        const remainingTime =
+          remainingSegments *
+          (averageSegmentSize > 0
+            ? downloaded / current / averageSegmentSize
+            : 0);
+
+        let speedUnit = 'B/s';
+        let speedValue = averageSegmentSize;
+
+        if (speedValue > 1024) {
+          speedValue /= 1024;
+          speedUnit = 'KB/s';
+        }
+        if (speedValue > 1024) {
+          speedValue /= 1024;
+          speedUnit = 'MB/s';
+        }
+        if (speedValue > 1024) {
+          speedValue /= 1024;
+          speedUnit = 'GB/s';
+        }
+        if (speedValue > 1024) {
+          speedValue /= 1024;
+          speedUnit = 'TB/s';
+        }
+
+        const hours = Math.floor(remainingTime / 3600);
+        const minutes = Math.floor((remainingTime % 3600) / 60);
+        const seconds = Math.floor(remainingTime % 60);
+
+        let eta;
+        if (hours > 0) {
+          eta = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        } else if (minutes > 0) {
+          eta = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        } else {
+          eta = `00:${String(seconds).padStart(2, '0')}`;
         }
 
         segments[index].path = segmentPath;
@@ -89,6 +134,16 @@ export default function segment(
             total: total,
             current: current,
             percentage: Math.floor((current / total) * 100),
+          },
+          attribute: {
+            downloadSpeed: {
+              string: `${speedValue.toFixed(2)} ${speedUnit}`,
+              number: parseInt(speedValue.toFixed(2)),
+            },
+            eta: {
+              string: eta,
+              number: Math.floor(remainingTime),
+            },
           },
         });
       } catch (e) {

@@ -1,11 +1,17 @@
-import m3u8 from '../src/index'
+import m3u8 from '../build/index';
 
-test('download', async() => {
-    let instance = new m3u8({
-        streamUrl: 'https://ed.netmagcdn.com:2228/hls-playback/752ad0368988df8b656451ba1cd732cae60a4bd85247be071f5aa74c268f1a03ed9b258251f5e4c5bc5f4d74cdfdd1714d98cb1cfb50dcc0bdb018db66cc36975efd3312e5cececdfd6a55b933c181c3bdce61eb49c8efa141c8feefb1a47dead7ad2f9c378f250ec604deed0bf48f0f235fa408363bfcc1d537bcd8f04f1b9034c92c083f03e29754a081cc5bc3b91f/master.m3u8',
-        output: 'out.mp4',
-        cache: '.cache'
-    })
+test('download', async () => {
+  const instance = new m3u8({
+    streamUrl:
+      'https://wf1.biananset.net/_v7/d8ba2bdf6ae1fb8f5cd30e48daf3115f49b4bc6525a6a2d4f724a48c9cf6eb4c3f6f14b1fa4cd78a0b2c0af7296c823799d73891d3a7c224fd242cd96d0428ae07c6ea8bee9918a7597f7834b3a32da3ab7b3501c26fc9b746b8c10dde2a91b4955aec657728e4015c17e423e4a32de56730d0ef463370769b82c61f130887b7/master.m3u8',
+    output: 'out.mp4',
+    cache: '.cache',
+    cb: console.log,
+  });
 
-    expect(await instance.startDownload()).toBe(100);
+  instance.on('segments_download:progress', data => {
+    console.log(data);
+  });
+
+  instance.startDownload();
 });

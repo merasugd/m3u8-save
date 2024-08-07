@@ -22,7 +22,7 @@ const url_1 = __importDefault(require("url"));
 const uuid_1 = require("uuid");
 const error_1 = require("./error");
 const download_1 = __importDefault(require("./download"));
-const iso_639_2_1 = require("iso-639-2");
+const langs_1 = __importDefault(require("langs"));
 function processVideo(input, output, ffmpegPath = ffmpeg_static_1.default || '', captions = [], cache = path_1.default.join(require('os').tmpdir(), 'm3u8dl')) {
     return new Promise((resolve) => __awaiter(this, void 0, void 0, function* () {
         const tsToVideo = yield ffmpegRun(['-i', input, '-c', 'copy', output], ffmpegPath);
@@ -131,11 +131,11 @@ function isPath(input) {
     return (path_1.default.isAbsolute(input) || input.startsWith('.') || input.startsWith('~'));
 }
 function langCodec(lang) {
-    const allCodecs = iso_639_2_1.iso6392;
+    const allCodecs = langs_1.default.all();
     const fetched = allCodecs.find(v => v.name.toLowerCase() === lang);
     if (!fetched)
         return 'eng';
-    return fetched.iso6392B;
+    return fetched['2B'];
 }
 function capitalizeFirstLetter(str) {
     if (str.length === 0)

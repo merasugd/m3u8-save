@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import events from 'events';
 import ffmpeg from 'ffmpeg-static';
 
 import {error as M3U8Error} from './functions/error';
@@ -9,25 +8,10 @@ import segments from './functions/segments';
 import merge from './functions/merge';
 import transmux from './functions/transmux';
 
-interface Caption {
-  uri: string;
-  lang: string;
-}
+import {Options, M3U8Events} from './utils/types';
+import {TypedEventEmitter} from './utils/typed_events';
 
-interface Options {
-  streamUrl: string;
-  output: string;
-  quality?: string;
-  mergedPath?: string;
-  cache?: string;
-  concurrency?: number;
-  captions?: Caption[];
-  ffmpegPath?: string;
-  ffmpegMerge?: boolean;
-  cb?: (event: string, data: any) => void;
-}
-
-class M3U8 extends events.EventEmitter {
+class M3U8 extends TypedEventEmitter<M3U8Events> {
   private _options: Options;
   private oldEmit: typeof this.emit;
 
@@ -138,7 +122,7 @@ class M3U8 extends events.EventEmitter {
         return resolve(new M3U8Error(data));
       }
 
-      master.emit('merging:start');
+      master.emit('merging:start', options.mergedPath, options.ffmpegMerge);
 
       const merged = await merge(
         data,
@@ -151,7 +135,7 @@ class M3U8 extends events.EventEmitter {
         return resolve(new M3U8Error(String(merged)));
       }
 
-      master.emit('merging:end');
+      master.emit('merging:end', options.mergedPath);
       master.emit('conversion:start');
 
       const toMp4 = await transmux(
@@ -166,8 +150,8 @@ class M3U8 extends events.EventEmitter {
         return resolve(new M3U8Error(String(toMp4)));
       }
 
-      master.emit('conversion:end');
-      master.emit('end');
+      master.emit('conversion:end', captions);
+      master.emit('end', options);
 
       if (fs.existsSync(options.cache || ''))
         await fs.promises.rm(options.cache || '', {

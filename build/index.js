@@ -14,14 +14,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
-const events_1 = __importDefault(require("events"));
 const ffmpeg_static_1 = __importDefault(require("ffmpeg-static"));
 const error_1 = require("./functions/error");
 const parser_1 = __importDefault(require("./functions/parser"));
 const segments_1 = __importDefault(require("./functions/segments"));
 const merge_1 = __importDefault(require("./functions/merge"));
 const transmux_1 = __importDefault(require("./functions/transmux"));
-class M3U8 extends events_1.default.EventEmitter {
+const typed_events_1 = require("./utils/typed_events");
+class M3U8 extends typed_events_1.TypedEventEmitter {
     /**
      * Create an M3U8 Instance Downloader.
      * @constructor
@@ -95,21 +95,21 @@ class M3U8 extends events_1.default.EventEmitter {
                 master.emit('error', data);
                 return resolve(new error_1.error(data));
             }
-            master.emit('merging:start');
+            master.emit('merging:start', options.mergedPath, options.ffmpegMerge);
             const merged = yield (0, merge_1.default)(data, options.mergedPath, options.ffmpegMerge, options.ffmpegPath);
             if (merged !== 100) {
                 master.emit('error', merged);
                 return resolve(new error_1.error(String(merged)));
             }
-            master.emit('merging:end');
+            master.emit('merging:end', options.mergedPath);
             master.emit('conversion:start');
             const toMp4 = yield (0, transmux_1.default)(options.mergedPath || '', options.output, options.ffmpegPath, captions, options.cache);
             if (toMp4 !== 100) {
                 master.emit('error', toMp4);
                 return resolve(new error_1.error(String(toMp4)));
             }
-            master.emit('conversion:end');
-            master.emit('end');
+            master.emit('conversion:end', captions);
+            master.emit('end', options);
             if (fs_1.default.existsSync(options.cache || ''))
                 yield fs_1.default.promises.rm(options.cache || '', {
                     recursive: true,
